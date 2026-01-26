@@ -1,41 +1,81 @@
 ## 👋 Welcome to cal 🚀
 
-Cal - Calendly alternative for scheduling
+Open-source calendar and scheduling infrastructure
 
 ## 📋 Description
 
-Calendly alternative for scheduling
+Open-source calendar and scheduling infrastructure
 
 ## 🚀 Services
 
-- **app**: Cal (`calcom/cal.com:latest`)
+- **app**: calcom/cal.com:latest
 
 ## 📦 Installation
 
-```shell
+### Option 1: Quick Install
+```bash
+curl -q -LSsf "https://raw.githubusercontent.com/composemgr/cal/main/docker-compose.yaml" -o compose.yml
+```
+
+### Option 2: Git Clone
+```bash
+git clone "https://github.com/composemgr/cal" ~/.local/srv/docker/cal
+cd ~/.local/srv/docker/cal
+docker compose up -d
+```
+
+### Option 3: Using composemgr
+```bash
 composemgr install cal
 ```
 
 ## 🔧 Configuration
 
+### Environment Variables
+
 ```shell
 TZ=America/New_York
-BASE_HOST_NAME=cal.example.com
 ```
+
+See `docker-compose.yaml` for complete list of configurable options.
 
 ## 🌐 Access
 
-- **Cal**: http://localhost:3000
+- **Web Interface**: http://172.17.0.1:3000
 
 ## 📂 Volumes
 
-- `./rootfs/data/cal` - Application data
+- `./rootfs/data/cal` - Data storage
 
-## 🔐 Security
+## 🔍 Logging
 
-- Change default passwords
-- Configure HTTPS with reverse proxy
-- Regular backups
+```shell
+docker compose logs -f app
+```
+
+## 🛠️ Management
+
+```bash
+# Start services
+docker compose up -d
+
+# Stop services
+docker compose down
+
+# Update to latest images
+docker compose pull && docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Restart services
+docker compose restart
+```
+
+## 📋 Requirements
+
+- Docker Engine 20.10+
+- Docker Compose V2+
 
 ## 🤝 Author
 
