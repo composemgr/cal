@@ -45,7 +45,7 @@ See `docker-compose.yaml` for complete list of configurable options.
 
 ## 📂 Volumes
 
-- `./rootfs/data/cal` - Data storage
+- `./volumes/data/cal` - Data storage
 
 ## 🔍 Logging
 
