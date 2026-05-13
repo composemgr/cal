@@ -24,8 +24,10 @@ services:
       EMAIL_FROM: ${EMAIL_SERVER_MAIL_FROM:-cal@example.com}
       EMAIL_SERVER_HOST: ${EMAIL_SERVER_HOST:-172.17.0.1}
       EMAIL_SERVER_PORT: ${EMAIL_SERVER_PORT:-587}
-      EMAIL_SERVER_USER: ${EMAIL_SERVER_USER:-}
-      EMAIL_SERVER_PASSWORD: ${EMAIL_SERVER_PASS:-}
+      EMAIL_SERVER_LOGIN_NAME: ${EMAIL_SERVER_LOGIN_NAME:-}
+      EMAIL_SERVER_LOGIN_PASSWORD: ${EMAIL_SERVER_LOGIN_PASS:-}
+      CONTAINER_NAME: cal-app
+      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
     ports:
       - '172.17.0.1:3000:3000'
     volumes:
@@ -35,6 +37,24 @@ services:
         condition: service_healthy
     networks:
       - cal
+      - proxy
+      - cloudflare
+    labels:
+      - 'traefik.enable=true'
+      - 'cloudflare.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'cloudflare.service=http://cal-app:3000'
+      - 'cloudflare.hostname=cal.${CLOUDFLARE_ZONE_NAME:-}'
+      - 'traefik.http.routers.cal-app.entrypoints=http'
+      - 'traefik.http.routers.cal-app-secure.tls=true'
+      - 'traefik.http.routers.cal-app.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.middlewares.cal-app-https-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.routers.cal-app.middlewares=cal-app-https-redirect'
+      - 'traefik.http.routers.cal-app-secure.entrypoints=https'
+      - 'traefik.http.routers.cal-app-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.routers.cal-app-secure.tls.certresolver=cloudflare'
+      - 'traefik.http.routers.cal-app-secure.service=cal-app'
+      - 'traefik.http.services.cal-app.loadbalancer.server.port=3000'
 
   cal-db:
     image: postgres:latest
@@ -48,6 +68,7 @@ services:
       POSTGRES_DB: ${DB_CREATE_DATABASE_NAME:-cal}
       POSTGRES_USER: ${DB_USER_NAME:-cal}
       POSTGRES_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
+      CONTAINER_NAME: cal-db
     volumes:
       - './volumes/data/db/postgres/cal:/var/lib/postgresql/data'
     healthcheck:
@@ -62,3 +83,7 @@ networks:
   cal:
     name: cal
     external: false
+  proxy:
+    external: true
+  cloudflare:
+    external: true
