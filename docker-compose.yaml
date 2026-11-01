@@ -1,4 +1,4 @@
-# nginx proxy address - http://172.17.0.1:3000
+# nginx proxy address - http://172.17.0.1:64130
 
 name: cal
 x-logging: &default-logging
@@ -18,7 +18,7 @@ services:
     environment:
       TZ: ${TZ:-America/New_York}
       NEXTAUTH_SECRET: ${APP_SECRET_KEY:-changeme_secret_key_min_32_chars}
-      NEXTAUTH_URL: http://${BASE_HOST_NAME:-localhost}:3000
+      NEXTAUTH_URL: https://${BASE_HOST_NAME:-$HOSTNAME}
       CALENDSO_ENCRYPTION_KEY: ${ENCRYPTION_KEY:-changeme_encryption_key_32chars}
       DATABASE_URL: postgresql://${DB_USER_NAME:-cal}:${DB_USER_PASS:-changeme_db_password}@cal-db:5432/${DB_CREATE_DATABASE_NAME:-cal}
       EMAIL_FROM: ${EMAIL_SERVER_MAIL_FROM:-cal@example.com}
@@ -29,30 +29,12 @@ services:
       CONTAINER_NAME: cal-app
       HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
     ports:
-      - '172.17.0.1:3000:3000'
+      - '172.17.0.1:64130:3000'
     depends_on:
       cal-db:
         condition: service_healthy
     networks:
       - cal
-      - proxy
-      - cloudflare
-    labels:
-      - 'traefik.enable=true'
-      - 'cloudflare.enable=true'
-      - 'traefik.docker.network=proxy'
-      - 'cloudflare.service=http://cal-app:3000'
-      - 'cloudflare.hostname=cal.${CLOUDFLARE_ZONE_NAME:-}'
-      - 'traefik.http.routers.cal-app.entrypoints=http'
-      - 'traefik.http.routers.cal-app-secure.tls=true'
-      - 'traefik.http.routers.cal-app.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
-      - 'traefik.http.middlewares.cal-app-https-redirect.redirectscheme.scheme=https'
-      - 'traefik.http.routers.cal-app.middlewares=cal-app-https-redirect'
-      - 'traefik.http.routers.cal-app-secure.entrypoints=https'
-      - 'traefik.http.routers.cal-app-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
-      - 'traefik.http.routers.cal-app-secure.tls.certresolver=cloudflare'
-      - 'traefik.http.routers.cal-app-secure.service=cal-app'
-      - 'traefik.http.services.cal-app.loadbalancer.server.port=3000'
 
   cal-db:
     image: postgres:latest
@@ -68,7 +50,7 @@ services:
       POSTGRES_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
       CONTAINER_NAME: cal-db
     volumes:
-      - './volumes/data/db/postgres/cal:/var/lib/postgresql/data'
+      - './volumes/db/postgres/cal:/var/lib/postgresql:z'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 30s
@@ -81,7 +63,3 @@ networks:
   cal:
     name: cal
     external: false
-  proxy:
-    external: true
-  cloudflare:
-    external: true

@@ -1,0 +1,76 @@
+name: cal
+x-logging: &default-logging
+  options:
+    max-size: '5m'
+    max-file: '1'
+  driver: json-file
+
+services:
+  app:
+    image: calcom/cal.com:latest
+    container_name: cal-app
+    hostname: ${BASE_HOST_NAME:-$HOSTNAME}
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      NEXTAUTH_SECRET: ${APP_SECRET_KEY:-changeme_secret_key_min_32_chars}
+      NEXTAUTH_URL: https://${BASE_HOST_NAME:-$HOSTNAME}
+      CALENDSO_ENCRYPTION_KEY: ${ENCRYPTION_KEY:-changeme_encryption_key_32chars}
+      DATABASE_URL: postgresql://${DB_USER_NAME:-cal}:${DB_USER_PASS:-changeme_db_password}@cal-db:5432/${DB_CREATE_DATABASE_NAME:-cal}
+      EMAIL_FROM: ${EMAIL_SERVER_MAIL_FROM:-cal@example.com}
+      EMAIL_SERVER_HOST: ${EMAIL_SERVER_HOST:-172.17.0.1}
+      EMAIL_SERVER_PORT: ${EMAIL_SERVER_PORT:-587}
+      EMAIL_SERVER_USER: ${EMAIL_SERVER_LOGIN_NAME:-}
+      EMAIL_SERVER_PASSWORD: ${EMAIL_SERVER_LOGIN_PASS:-}
+      CONTAINER_NAME: cal-app
+      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
+    depends_on:
+      cal-db:
+        condition: service_healthy
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=traefik'
+      - 'traefik.http.routers.cal-app.entrypoints=http'
+      - 'traefik.http.routers.cal-app.rule=Host(`${BASE_HOST_NAME:-$HOSTNAME}`)'
+      - 'traefik.http.routers.cal-app.middlewares=cal-app-https-redirect'
+      - 'traefik.http.middlewares.cal-app-https-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.routers.cal-app-secure.entrypoints=https'
+      - 'traefik.http.routers.cal-app-secure.rule=Host(`${BASE_HOST_NAME:-$HOSTNAME}`)'
+      - 'traefik.http.routers.cal-app-secure.tls.certresolver=cloudflare'
+      - 'traefik.http.routers.cal-app-secure.service=cal-app'
+      - 'traefik.http.services.cal-app.loadbalancer.server.port=3000'
+    networks:
+      - cal
+      - traefik
+
+  cal-db:
+    image: postgres:latest
+    container_name: cal-db
+    hostname: cal-db
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      POSTGRES_DB: ${DB_CREATE_DATABASE_NAME:-cal}
+      POSTGRES_USER: ${DB_USER_NAME:-cal}
+      POSTGRES_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
+      CONTAINER_NAME: cal-db
+    volumes:
+      - './volumes/db/postgres/cal:/var/lib/postgresql:z'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - cal
+
+networks:
+  cal:
+    name: cal
+    external: false
+  traefik:
+    external: true

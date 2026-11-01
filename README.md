@@ -10,6 +10,10 @@ Open-source calendar and scheduling infrastructure
 
 - **app**: calcom/cal.com:latest
 
+### Infrastructure Components
+
+- **cal-db**: postgres:latest
+
 ## 📦 Installation
 
 ### Option 1: Quick Install
@@ -21,7 +25,8 @@ curl -q -LSsf "https://raw.githubusercontent.com/composemgr/cal/main/docker-comp
 ```bash
 git clone "https://github.com/composemgr/cal" ~/.local/srv/docker/cal
 cd ~/.local/srv/docker/cal
-docker compose up -d
+cp default.env .env
+docker compose --env-file .env up -d
 ```
 
 ### Option 3: Using composemgr
@@ -35,41 +40,96 @@ composemgr install cal
 
 ```shell
 TZ=America/New_York
+APP_SECRET_KEY=changeme_secret_key_min_32_chars
+ENCRYPTION_KEY=changeme_encryption_key_32chars
+DB_CREATE_DATABASE_NAME=cal
+DB_USER_NAME=cal
+DB_USER_PASS=changeme_db_password
+EMAIL_SERVER_HOST=172.17.0.1
+EMAIL_SERVER_PORT=587
+EMAIL_SERVER_LOGIN_NAME=
+EMAIL_SERVER_LOGIN_PASS=
+EMAIL_SERVER_MAIL_FROM=cal@example.com
 ```
 
-See `docker-compose.yaml` for complete list of configurable options.
+See `docker-compose.yaml` for the complete list of configurable options.
+
+### Environment Files
+
+`default.env.sample` holds the full set of variables and is copied to `.env`
+before starting the stack:
+
+```bash
+cp default.env .env
+docker compose --env-file .env up -d
+```
+
+`app.env.sample` holds the app-specific overrides and is copied to `app.env`:
+
+```bash
+cp app.env.sample app.env
+```
+
+`composemgr up` applies `app.env` and `default.env` automatically. Raw
+`docker compose` commands need `--env-file .env` to pick up the same values.
+
+### Reverse Proxy
+
+Three standalone compose files ship in this repo:
+
+| File | Use |
+|------|-----|
+| `docker-compose.yaml` | Default, published on `172.17.0.1:64130` |
+| `docker-compose.traefik.yaml` | Behind an existing external `traefik` network |
+| `docker-compose.tunnel.yaml` | Behind an existing external `cloudflare` tunnel network |
+
+```bash
+docker compose -f docker-compose.traefik.yaml --env-file .env up -d
+```
+
+The proxy variants publish no host ports; the app is reached only through the
+proxy network.
 
 ## 🌐 Access
 
-- **Web Interface**: http://172.17.0.1:3000
+- **Web Interface**: http://172.17.0.1:64130
 
 ## 📂 Volumes
 
-- `./volumes/data/cal` - Data storage
+- `./volumes/db/postgres/cal` - Database data
+
+## 🔐 Security
+
+- Change all default passwords before deploying to production
+- Use strong secrets for all authentication tokens
+- Configure HTTPS using a reverse proxy (nginx, traefik, caddy)
+- Regularly update Docker images for security patches
+- Backup your data regularly
+- Database and cache services are internal-only and never published to the host
 
 ## 🔍 Logging
 
 ```shell
-docker compose logs -f app
+docker compose --env-file .env logs -f app
 ```
 
 ## 🛠️ Management
 
 ```bash
 # Start services
-docker compose up -d
+docker compose --env-file .env up -d
 
 # Stop services
-docker compose down
+docker compose --env-file .env down
 
 # Update to latest images
-docker compose pull && docker compose up -d
+docker compose --env-file .env pull && docker compose --env-file .env up -d
 
 # View logs
-docker compose logs -f
+docker compose --env-file .env logs -f
 
 # Restart services
-docker compose restart
+docker compose --env-file .env restart
 ```
 
 ## 📋 Requirements
